@@ -132,7 +132,25 @@ public class HttpServer extends SimpleWebServer {
             e.put("size", file.length());
             e.put("date", file.lastModified());
             e.put("file", file.getPath());
+            e.put("preview", file.getPath());
+            e.put("type", "image");
             e.put("thumbnail", "/thumbnail.do?f=" + file.getPath());
+
+            // If the file is ARW, we can't display it in the browser
+            // so check if we have a jpg with the same file name we can show instead
+            // If not, we use the thumbnail so we can show anything
+            String fileExt = file.getName().substring(file.getName().lastIndexOf(".") + 1);
+            if (fileExt.equalsIgnoreCase("ARW")) {
+                e.put("type", "raw");
+                File jpgFile = new File(file.getParentFile(), file.getName().substring(0, file.getName().lastIndexOf(".")) + ".JPG");
+                if (jpgFile.exists()) {
+                    e.put("preview", jpgFile.getPath());
+                } else {
+                    e.put("preview", "/thumbnail.do?f=" + file.getPath());
+                }
+            } else if (Arrays.asList(FilesystemScanner.videoFormats).contains("." + fileExt.toLowerCase())) {
+                e.put("type", "video");
+            }
 
             list.put(e);
         }

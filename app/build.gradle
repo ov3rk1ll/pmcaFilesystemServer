@@ -1,4 +1,6 @@
 import com.android.ddmlib.AndroidDebugBridge
+import com.android.ddmlib.NullOutputReceiver
+import com.android.ddmlib.CollectingOutputReceiver
 
 apply plugin: 'com.android.application'
 
@@ -38,6 +40,37 @@ android {
         abortOnError false
     }
 }
+
+task pushFilesToDevices {
+    def src = "${project.rootDir}/testFiles/"
+    def dest = "/sdcard/DCIM/TEST/"
+    def files = new File(src).listFiles()
+    AndroidDebugBridge.initIfNeeded(false)
+    def bridge = AndroidDebugBridge.createBridge(android.adbExecutable.path, false)
+    doLast {
+        bridge.devices.each { device ->
+            // Only push test files to emulator
+            if (device.isEmulator()) {
+                println "removing files from ${dest} on ${device.name}..."
+                device.executeShellCommand("rm ${dest}*", NullOutputReceiver.receiver)
+
+                println "pushing files from ${src} to ${device.name}..."
+                files.each { file ->
+                    device.pushFile(file.absolutePath, "${dest}${file.name}")
+                }
+
+                println "pushing test files to ${device.name} is done"
+            }
+        }
+    }
+}
+
+tasks.whenTaskAdded { taskItem ->
+    if (taskItem.name.contains("AndroidTest")) {
+        taskItem.dependsOn pushFilesToDevices
+    }
+}
+
 
 dependencies {
     compile 'com.github.ma1co.OpenMemories-Framework:framework:f8df350'
